@@ -1,0 +1,17 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.apprevelations.myparkingplace.MainActivity" >
+
+    <item
+        android:id="@+id/action_park"
+        android:title="Park Here"
+        app:showAsAction="ifRoom|withText"/>
+    
+    <item
+        android:id="@+id/action_parked"
+        android:title="Go to Parked Place"
+        app:showAsAction="ifRoom|withText"/>
+    
+
+</menu>
