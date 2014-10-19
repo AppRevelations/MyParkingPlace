@@ -49,28 +49,26 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 public class MainActivity extends ActionBarActivity implements
-		LocationListener,
-		GooglePlayServicesClient.ConnectionCallbacks,
+		LocationListener, GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener {
-	
-    private LocationRequest mLocationRequest;
-    private LocationClient mLocationClient;
-    SharedPreferences mPrefs;
-    SharedPreferences.Editor mEditor;
-    boolean mUpdatesRequested = false;
-    
+
+	private LocationRequest mLocationRequest;
+	private LocationClient mLocationClient;
+	SharedPreferences mPrefs;
+	SharedPreferences.Editor mEditor;
+	boolean mUpdatesRequested = false;
+
 	private GoogleMap mGoogleMap;
 	private SharedPreferences spref;
 	private double lat, latitude;
 	private double lng, longitude;
 	int flag = 0;
 
-	
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-    
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+
 		spref = getSharedPreferences("Location_pref", Context.MODE_PRIVATE);
 
 		flag = 0;
@@ -78,31 +76,22 @@ public class MainActivity extends ActionBarActivity implements
 		ed.putInt("flag", flag);
 		ed.commit();
 
-        mLocationRequest = LocationRequest.create();
-        mLocationRequest.setInterval(LocationUtils.UPDATE_INTERVAL_IN_MILLISECONDS);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setFastestInterval(LocationUtils.FAST_INTERVAL_CEILING_IN_MILLISECONDS);
-        mUpdatesRequested = false;
-        mPrefs = getSharedPreferences(LocationUtils.SHARED_PREFERENCES, Context.MODE_PRIVATE);
-        mEditor = mPrefs.edit();
-        mLocationClient = new LocationClient(this, this, this);
+		mLocationRequest = LocationRequest.create();
+		mLocationRequest
+				.setInterval(LocationUtils.UPDATE_INTERVAL_IN_MILLISECONDS);
+		mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+		mLocationRequest
+				.setFastestInterval(LocationUtils.FAST_INTERVAL_CEILING_IN_MILLISECONDS);
+		mUpdatesRequested = false;
+		mPrefs = getSharedPreferences(LocationUtils.SHARED_PREFERENCES,
+				Context.MODE_PRIVATE);
+		mEditor = mPrefs.edit();
+		mLocationClient = new LocationClient(this, this, this);
 
-        getLocation();
-        
-        
 		mGoogleMap = ((SupportMapFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.map)).getMap();
 
-		mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(lat,
-				lng), 15));
-		MarkerOptions marker = new MarkerOptions()
-				.position(new LatLng(lat, lng)).title("You are Here")
-				.draggable(false);
-
-		mGoogleMap.addMarker(marker);
-   
-    }
-    
+	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -123,17 +112,16 @@ public class MainActivity extends ActionBarActivity implements
 
 			if (isNetworkAvailable()) {
 				getLocation();
-					String slat = String.valueOf(lat);
-					String slng = String
-							.valueOf(lng);
-					Editor editor = spref.edit();
-					editor.putString("Lat", slat);
-					editor.putString("Long", slng);
-					editor.commit();
-					Toast.makeText(getApplicationContext(),
-							"Your Vehicle has been Parked", Toast.LENGTH_SHORT)
-							.show();
-				
+				String slat = String.valueOf(lat);
+				String slng = String.valueOf(lng);
+				Editor editor = spref.edit();
+				editor.putString("Lat", slat);
+				editor.putString("Long", slng);
+				editor.commit();
+				Toast.makeText(getApplicationContext(),
+						"Your Vehicle has been Parked", Toast.LENGTH_SHORT)
+						.show();
+
 			} else
 				Toast.makeText(
 						getApplicationContext(),
@@ -193,8 +181,6 @@ public class MainActivity extends ActionBarActivity implements
 		return activeNetworkInfo != null && activeNetworkInfo.isConnected();
 	}
 
-
-	
 	private String getDirectionsUrl(LatLng origin, LatLng dest) {
 
 		// Origin of route
@@ -354,349 +340,368 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
-	
-	
-    
-    
-    @Override
-    public void onStop() {
+	@Override
+	public void onStop() {
+
+		if (mLocationClient.isConnected()) {
+			stopPeriodicUpdates();
+		}
+		mLocationClient.disconnect();
 
-        if (mLocationClient.isConnected()) {
-            stopPeriodicUpdates();
-        }
-        mLocationClient.disconnect();
+		super.onStop();
+	}
 
-        super.onStop();
-    }
+	@Override
+	public void onPause() {
 
-    @Override
-    public void onPause() {
+		mEditor.putBoolean(LocationUtils.KEY_UPDATES_REQUESTED,
+				mUpdatesRequested);
+		mEditor.commit();
 
-        mEditor.putBoolean(LocationUtils.KEY_UPDATES_REQUESTED, mUpdatesRequested);
-        mEditor.commit();
+		super.onPause();
+	}
 
-        super.onPause();
-    }
+	@Override
+	public void onStart() {
 
+		super.onStart();
+		mLocationClient.connect();
 
-    @Override
-    public void onStart() {
+	}
 
-        super.onStart();
-        mLocationClient.connect();
+	@Override
+	public void onResume() {
+		super.onResume();
 
-    }
+		if (mPrefs.contains(LocationUtils.KEY_UPDATES_REQUESTED)) {
+			mUpdatesRequested = mPrefs.getBoolean(
+					LocationUtils.KEY_UPDATES_REQUESTED, false);
+		} else {
+			mEditor.putBoolean(LocationUtils.KEY_UPDATES_REQUESTED, false);
+			mEditor.commit();
+		}
 
-    @Override
-    public void onResume() {
-        super.onResume();
+	}
 
-        if (mPrefs.contains(LocationUtils.KEY_UPDATES_REQUESTED)) {
-            mUpdatesRequested = mPrefs.getBoolean(LocationUtils.KEY_UPDATES_REQUESTED, false);
-        } else {
-            mEditor.putBoolean(LocationUtils.KEY_UPDATES_REQUESTED, false);
-            mEditor.commit();
-        }
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode,
+			Intent intent) {
 
-    }
+		switch (requestCode) {
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+		case LocationUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST:
 
-        switch (requestCode) {
+			switch (resultCode) {
+			case Activity.RESULT_OK:
 
-            case LocationUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST :
+				Log.d(LocationUtils.APPTAG, getString(R.string.resolved));
 
-                switch (resultCode) {
-                    case Activity.RESULT_OK:
+				Toast.makeText(getApplicationContext(), R.string.connected,
+						Toast.LENGTH_SHORT).show();
+				Toast.makeText(getApplicationContext(), R.string.resolved,
+						Toast.LENGTH_SHORT).show();
 
-                        Log.d(LocationUtils.APPTAG, getString(R.string.resolved));
+				break;
+			default:
+				Log.d(LocationUtils.APPTAG, getString(R.string.no_resolution));
 
-                        Toast.makeText(getApplicationContext(), R.string.connected, Toast.LENGTH_SHORT).show();
-                        Toast.makeText(getApplicationContext(), R.string.resolved, Toast.LENGTH_SHORT).show();
-                        
-                    break;
-                    default:
-                        Log.d(LocationUtils.APPTAG, getString(R.string.no_resolution));
+				Toast.makeText(getApplicationContext(), R.string.disconnected,
+						Toast.LENGTH_SHORT).show();
+				Toast.makeText(getApplicationContext(), R.string.no_resolution,
+						Toast.LENGTH_SHORT).show();
 
-                        Toast.makeText(getApplicationContext(), R.string.disconnected, Toast.LENGTH_SHORT).show();
-                        Toast.makeText(getApplicationContext(), R.string.no_resolution, Toast.LENGTH_SHORT).show();
+				break;
+			}
 
-                    break;
-                }
+		default:
+			Log.d(LocationUtils.APPTAG,
+					getString(R.string.unknown_activity_request_code,
+							requestCode));
 
-            default:
-               Log.d(LocationUtils.APPTAG,
-                       getString(R.string.unknown_activity_request_code, requestCode));
-
-               break;
-        }
-    }
-
-    private boolean servicesConnected() {
-
-        int resultCode =
-                GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
-
-        if (ConnectionResult.SUCCESS == resultCode) {
-            Log.d(LocationUtils.APPTAG, getString(R.string.play_services_available));
-            return true;
-        } else {
-            Dialog dialog = GooglePlayServicesUtil.getErrorDialog(resultCode, this, 0);
-            if (dialog != null) {
-                ErrorDialogFragment errorFragment = new ErrorDialogFragment();
-                errorFragment.setDialog(dialog);
-                errorFragment.show(getSupportFragmentManager(), LocationUtils.APPTAG);
-            }
-            return false;
-        }
-    }
-
-    public void getLocation() {
+			break;
+		}
+	}
 
-        if (servicesConnected()) {
-
-            Location currentLocation = mLocationClient.getLastLocation();
-
-            
-         lat= LocationUtils.getLat(this, currentLocation);
-        lng= LocationUtils.getLng(this, currentLocation);
-        }
-    }
-    public void startUpdates(View v) {
-        mUpdatesRequested = true;
-
-        if (servicesConnected()) {
-            startPeriodicUpdates();
-        }
-    }
-
-    public void stopUpdates(View v) {
-        mUpdatesRequested = false;
-
-        if (servicesConnected()) {
-            stopPeriodicUpdates();
-        }
-    }
-
-    @Override
-    public void onConnected(Bundle bundle) {
-    	Toast.makeText(getApplicationContext(), R.string.connected, Toast.LENGTH_SHORT).show();
-
-        if (mUpdatesRequested) {
-            startPeriodicUpdates();
-        }
-    }
-
-    @Override
-    public void onDisconnected() {
-    	Toast.makeText(getApplicationContext(), R.string.disconnected, Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-
-        if (connectionResult.hasResolution()) {
-            try {
-
-                connectionResult.startResolutionForResult(
-                        this,
-                        LocationUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST);
-            } catch (IntentSender.SendIntentException e) {
-
-                e.printStackTrace();
-            }
-        } else {
-
-            showErrorDialog(connectionResult.getErrorCode());
-        }
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-	Toast.makeText(getApplicationContext(), R.string.location_updated, Toast.LENGTH_SHORT).show();
-
-    	
-    	lat= LocationUtils.getLat(this, location);
-    	lng= LocationUtils.getLng(this, location);
-    	
-    }
-    private void startPeriodicUpdates() {
-
-        mLocationClient.requestLocationUpdates(mLocationRequest, this);
-        
-        Toast.makeText(getApplicationContext(), R.string.location_requested, Toast.LENGTH_SHORT).show();
-        
-    }
-
-    private void stopPeriodicUpdates() {
-        mLocationClient.removeLocationUpdates(this);
-        
-        Toast.makeText(getApplicationContext(), R.string.location_updates_stopped, Toast.LENGTH_SHORT).show();
-        
-    }
-
-    private void showErrorDialog(int errorCode) {
-
-        Dialog errorDialog = GooglePlayServicesUtil.getErrorDialog(
-            errorCode,
-            this,
-            LocationUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST);
-
-        if (errorDialog != null) {
-
-            ErrorDialogFragment errorFragment = new ErrorDialogFragment();
-            errorFragment.setDialog(errorDialog);
-            errorFragment.show(getSupportFragmentManager(), LocationUtils.APPTAG);
-        }
-    }
-
-    public static class ErrorDialogFragment extends DialogFragment {
-
-        private Dialog mDialog;
-        public ErrorDialogFragment() {
-            super();
-            mDialog = null;
-        }
-
-        public void setDialog(Dialog dialog) {
-            mDialog = dialog;
-        }
-
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            return mDialog;
-        }
-    }
-    
-    
-    protected class GetAddressTask extends AsyncTask<Location, Void, String> {
-
-        // Store the context passed to the AsyncTask when the system instantiates it.
-        Context localContext;
-
-        // Constructor called by the system to instantiate the task
-        public GetAddressTask(Context context) {
-
-            // Required by the semantics of AsyncTask
-            super();
-
-            // Set a Context for the background task
-            localContext = context;
-        }
-
-        /**
-         * Get a geocoding service instance, pass latitude and longitude to it, format the returned
-         * address, and return the address to the UI thread.
-         */
-        @Override
-        protected String doInBackground(Location... params) {
-            /*
-             * Get a new geocoding service instance, set for localized addresses. This example uses
-             * android.location.Geocoder, but other geocoders that conform to address standards
-             * can also be used.
-             */
-            Geocoder geocoder = new Geocoder(localContext, Locale.getDefault());
-
-            // Get the current location from the input parameter list
-            Location location = params[0];
-
-            // Create a list to contain the result address
-            List <Address> addresses = null;
-
-            // Try to get an address for the current location. Catch IO or network problems.
-            try {
-
-                /*
-                 * Call the synchronous getFromLocation() method with the latitude and
-                 * longitude of the current location. Return at most 1 address.
-                 */
-                addresses = geocoder.getFromLocation(location.getLatitude(),
-                    location.getLongitude(), 1
-                );
-
-                // Catch network or other I/O problems.
-                } catch (IOException exception1) {
-
-                    // Log an error and return an error message
-                    Log.e(LocationUtils.APPTAG, getString(R.string.IO_Exception_getFromLocation));
-
-                    // print the stack trace
-                    exception1.printStackTrace();
-
-                    // Return an error message
-                    return (getString(R.string.IO_Exception_getFromLocation));
-
-                // Catch incorrect latitude or longitude values
-                } catch (IllegalArgumentException exception2) {
-
-                    // Construct a message containing the invalid arguments
-                    String errorString = getString(
-                            R.string.illegal_argument_exception,
-                            location.getLatitude(),
-                            location.getLongitude()
-                    );
-                    // Log the error and print the stack trace
-                    Log.e(LocationUtils.APPTAG, errorString);
-                    exception2.printStackTrace();
-
-                    //
-                    return errorString;
-                }
-                // If the reverse geocode returned an address
-                if (addresses != null && addresses.size() > 0) {
-
-                    // Get the first address
-                    Address address = addresses.get(0);
-
-                    // Format the first line of address
-                    String addressText = getString(R.string.address_output_string,
-
-                            // If there's a street address, add it
-                            address.getMaxAddressLineIndex() > 0 ?
-                                    address.getAddressLine(0) : "",
-
-                            // Locality is usually a city
-                            address.getLocality(),
-
-                            // The country of the address
-                            address.getCountryName()
-                    );
-
-                    // Return the text
-                    return addressText;
-
-                // If there aren't any addresses, post a message
-                } else {
-                  return getString(R.string.no_address_found);
-                }
-        }
-
-        /**
-         * A method that's called once doInBackground() completes. Set the text of the
-         * UI element that displays the address. This method runs on the UI thread.
-         */
-        @Override
-        protected void onPostExecute(String address) {
-
-            // Turn off the progress bar
-/*-------------------------------------------------------------------------------------
-            mActivityIndicator.setVisibility(View.GONE);
---------------------------------------------------------------------------------------*/
-        	
-        	Toast.makeText(getApplicationContext(), "GONE", Toast.LENGTH_SHORT).show();
-
-            // Set the address in the UI
-/*-------------------------------------------------------------------------------------
-            mAddress.setText(address);
---------------------------------------------------------------------------------------*/
-        	
-        	//longitude.setText(address);
-        	
-        }
-    }
-
-
-    
-    
+	private boolean servicesConnected() {
+
+		int resultCode = GooglePlayServicesUtil
+				.isGooglePlayServicesAvailable(this);
+
+		if (ConnectionResult.SUCCESS == resultCode) {
+			Log.d(LocationUtils.APPTAG,
+					getString(R.string.play_services_available));
+			return true;
+		} else {
+			Dialog dialog = GooglePlayServicesUtil.getErrorDialog(resultCode,
+					this, 0);
+			if (dialog != null) {
+				ErrorDialogFragment errorFragment = new ErrorDialogFragment();
+				errorFragment.setDialog(dialog);
+				errorFragment.show(getSupportFragmentManager(),
+						LocationUtils.APPTAG);
+			}
+			return false;
+		}
+	}
+
+	public void getLocation() {
+
+		if (servicesConnected()) {
+
+			Location currentLocation = mLocationClient.getLastLocation();
+
+			lat = LocationUtils.getLat(this, currentLocation);
+			lng = LocationUtils.getLng(this, currentLocation);
+		}
+	}
+
+	public void startUpdates(View v) {
+		mUpdatesRequested = true;
+
+		if (servicesConnected()) {
+			startPeriodicUpdates();
+		}
+	}
+
+	public void stopUpdates(View v) {
+		mUpdatesRequested = false;
+
+		if (servicesConnected()) {
+			stopPeriodicUpdates();
+		}
+	}
+
+	@Override
+	public void onConnected(Bundle bundle) {
+		Toast.makeText(getApplicationContext(), R.string.connected,
+				Toast.LENGTH_SHORT).show();
+
+		if (mUpdatesRequested) {
+			startPeriodicUpdates();
+		}
+
+		getLocation();
+
+		mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(lat,
+				lng), 15));
+		MarkerOptions marker = new MarkerOptions()
+				.position(new LatLng(lat, lng)).title("You are Here")
+				.draggable(false);
+
+		mGoogleMap.addMarker(marker);
+	}
+
+	@Override
+	public void onDisconnected() {
+		Toast.makeText(getApplicationContext(), R.string.disconnected,
+				Toast.LENGTH_SHORT).show();
+	}
+
+	@Override
+	public void onConnectionFailed(ConnectionResult connectionResult) {
+
+		if (connectionResult.hasResolution()) {
+			try {
+
+				connectionResult.startResolutionForResult(this,
+						LocationUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST);
+			} catch (IntentSender.SendIntentException e) {
+
+				e.printStackTrace();
+			}
+		} else {
+
+			showErrorDialog(connectionResult.getErrorCode());
+		}
+	}
+
+	@Override
+	public void onLocationChanged(Location location) {
+		Toast.makeText(getApplicationContext(), R.string.location_updated,
+				Toast.LENGTH_SHORT).show();
+
+		lat = LocationUtils.getLat(this, location);
+		lng = LocationUtils.getLng(this, location);
+
+	}
+
+	private void startPeriodicUpdates() {
+
+		mLocationClient.requestLocationUpdates(mLocationRequest, this);
+
+		Toast.makeText(getApplicationContext(), R.string.location_requested,
+				Toast.LENGTH_SHORT).show();
+
+	}
+
+	private void stopPeriodicUpdates() {
+		mLocationClient.removeLocationUpdates(this);
+
+		Toast.makeText(getApplicationContext(),
+				R.string.location_updates_stopped, Toast.LENGTH_SHORT).show();
+
+	}
+
+	private void showErrorDialog(int errorCode) {
+
+		Dialog errorDialog = GooglePlayServicesUtil.getErrorDialog(errorCode,
+				this, LocationUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST);
+
+		if (errorDialog != null) {
+
+			ErrorDialogFragment errorFragment = new ErrorDialogFragment();
+			errorFragment.setDialog(errorDialog);
+			errorFragment.show(getSupportFragmentManager(),
+					LocationUtils.APPTAG);
+		}
+	}
+
+	public static class ErrorDialogFragment extends DialogFragment {
+
+		private Dialog mDialog;
+
+		public ErrorDialogFragment() {
+			super();
+			mDialog = null;
+		}
+
+		public void setDialog(Dialog dialog) {
+			mDialog = dialog;
+		}
+
+		@Override
+		public Dialog onCreateDialog(Bundle savedInstanceState) {
+			return mDialog;
+		}
+	}
+
+	protected class GetAddressTask extends AsyncTask<Location, Void, String> {
+
+		// Store the context passed to the AsyncTask when the system
+		// instantiates it.
+		Context localContext;
+
+		// Constructor called by the system to instantiate the task
+		public GetAddressTask(Context context) {
+
+			// Required by the semantics of AsyncTask
+			super();
+
+			// Set a Context for the background task
+			localContext = context;
+		}
+
+		/**
+		 * Get a geocoding service instance, pass latitude and longitude to it,
+		 * format the returned address, and return the address to the UI thread.
+		 */
+		@Override
+		protected String doInBackground(Location... params) {
+			/*
+			 * Get a new geocoding service instance, set for localized
+			 * addresses. This example uses android.location.Geocoder, but other
+			 * geocoders that conform to address standards can also be used.
+			 */
+			Geocoder geocoder = new Geocoder(localContext, Locale.getDefault());
+
+			// Get the current location from the input parameter list
+			Location location = params[0];
+
+			// Create a list to contain the result address
+			List<Address> addresses = null;
+
+			// Try to get an address for the current location. Catch IO or
+			// network problems.
+			try {
+
+				/*
+				 * Call the synchronous getFromLocation() method with the
+				 * latitude and longitude of the current location. Return at
+				 * most 1 address.
+				 */
+				addresses = geocoder.getFromLocation(location.getLatitude(),
+						location.getLongitude(), 1);
+
+				// Catch network or other I/O problems.
+			} catch (IOException exception1) {
+
+				// Log an error and return an error message
+				Log.e(LocationUtils.APPTAG,
+						getString(R.string.IO_Exception_getFromLocation));
+
+				// print the stack trace
+				exception1.printStackTrace();
+
+				// Return an error message
+				return (getString(R.string.IO_Exception_getFromLocation));
+
+				// Catch incorrect latitude or longitude values
+			} catch (IllegalArgumentException exception2) {
+
+				// Construct a message containing the invalid arguments
+				String errorString = getString(
+						R.string.illegal_argument_exception,
+						location.getLatitude(), location.getLongitude());
+				// Log the error and print the stack trace
+				Log.e(LocationUtils.APPTAG, errorString);
+				exception2.printStackTrace();
+
+				//
+				return errorString;
+			}
+			// If the reverse geocode returned an address
+			if (addresses != null && addresses.size() > 0) {
+
+				// Get the first address
+				Address address = addresses.get(0);
+
+				// Format the first line of address
+				String addressText = getString(
+						R.string.address_output_string,
+
+						// If there's a street address, add it
+						address.getMaxAddressLineIndex() > 0 ? address
+								.getAddressLine(0) : "",
+
+						// Locality is usually a city
+						address.getLocality(),
+
+						// The country of the address
+						address.getCountryName());
+
+				// Return the text
+				return addressText;
+
+				// If there aren't any addresses, post a message
+			} else {
+				return getString(R.string.no_address_found);
+			}
+		}
+
+		/**
+		 * A method that's called once doInBackground() completes. Set the text
+		 * of the UI element that displays the address. This method runs on the
+		 * UI thread.
+		 */
+		@Override
+		protected void onPostExecute(String address) {
+
+			// Turn off the progress bar
+			/*-------------------------------------------------------------------------------------
+			 mActivityIndicator.setVisibility(View.GONE);
+			 --------------------------------------------------------------------------------------*/
+
+			Toast.makeText(getApplicationContext(), "GONE", Toast.LENGTH_SHORT)
+					.show();
+
+			// Set the address in the UI
+			/*-------------------------------------------------------------------------------------
+			 mAddress.setText(address);
+			 --------------------------------------------------------------------------------------*/
+
+			// longitude.setText(address);
+
+		}
+	}
+
 }
